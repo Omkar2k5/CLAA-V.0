@@ -22,7 +22,7 @@ A modern, responsive web application for managing time slot bookings with real-t
   Your browser does not support the video tag.
 </video>
 
-> **Note**: If the video doesn't play directly in the README, you can [watch it here](https://omkar2k5.github.io/Navikshaa-DevBatlleGround/demovideo.mp4)
+> **Note**: If the video doesn't play directly in the README, you can [🎬 Watch Demo Video](https://omkar2k5.github.io/Navikshaa-DevBatlleGround/demovideo.mp4)
 
 ## Tech Stack
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, Framer Motion
