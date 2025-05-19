@@ -8,7 +8,7 @@ import CancelModal from "@/components/cancel-modal"
 import LoadingSpinner from "@/components/loading-spinner"
 
 // API URL - use environment variable or default to localhost
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export default function BookingPage() {
   const [timeSlots, setTimeSlots] = useState([])
