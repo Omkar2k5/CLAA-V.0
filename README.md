@@ -16,6 +16,11 @@ A modern, responsive web application for managing time slot bookings with real-t
 - ⚡ Real-time updates
 - 🎨 Modern UI with animations
 
+## Demo Video
+https://github.com/yourusername/schedulo-lite/raw/main/public/demovideo.mp4
+
+![Demo Video](https://github.com/yourusername/schedulo-lite/raw/main/public/demovideo.mp4)
+
 ## Tech Stack
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, Framer Motion
 - **Backend**: Node.js, Express.js
@@ -40,10 +45,16 @@ cd schedulo-lite
 npm install --legacy-peer-deps
 ```
 
-3. Create `.env.local` file in the root directory
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001
-PORT=3001
+3. Set up environment variables
+```bash
+# Copy the example environment file
+cp env.example .env.local
+
+# Edit .env.local with your configuration
+# Required variables:
+# - NEXT_PUBLIC_API_URL: Your API URL (default: http://localhost:3001)
+# - PORT: Backend server port (default: 3001)
+# - JWT_SECRET: Your secret key for JWT
 ```
 
 4. Start the backend server
@@ -57,9 +68,6 @@ npm run dev
 ```
 
 6. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## Demo Video
-[Watch Demo Video](https://example.com/demo-video.mp4)
 
 ## API Endpoints
 
@@ -80,6 +88,7 @@ npm run dev
 ├── components/            # React components
 ├── contexts/             # React contexts
 ├── server.js             # Backend server
+├── env.example           # Example environment variables
 └── package.json          # Project dependencies
 ```
 
