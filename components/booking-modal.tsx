@@ -6,7 +6,7 @@ import { X, Clock, User } from "lucide-react"
 
 interface BookingModalProps {
   onClose: () => void
-  onConfirm: (name: string) => void
+  onConfirm: () => void
   slot: {
     id: string
     time: string
@@ -14,20 +14,12 @@ interface BookingModalProps {
 }
 
 export default function BookingModal({ onClose, onConfirm, slot }: BookingModalProps) {
-  const [name, setName] = useState("")
-  const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
-
-    if (!name.trim()) {
-      setError("Please enter your name")
-      return
-    }
-
     setIsSubmitting(true)
-    onConfirm(name)
+    onConfirm()
   }
 
   return (
@@ -39,7 +31,7 @@ export default function BookingModal({ onClose, onConfirm, slot }: BookingModalP
       onClick={onClose}
     >
       <motion.div
-        className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full overflow-hidden"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
@@ -48,64 +40,36 @@ export default function BookingModal({ onClose, onConfirm, slot }: BookingModalP
       >
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-medium text-gray-800">Book Time Slot</h3>
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-200">Book Time Slot</h3>
             <motion.button
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400"
               disabled={isSubmitting}
             >
               <X className="h-5 w-5" />
             </motion.button>
           </div>
 
-          <div className="bg-blue-50 rounded-lg p-4 mb-6 flex items-center gap-3">
-            <Clock className="h-5 w-5 text-blue-500" />
-            <span className="text-blue-700">{slot?.time}</span>
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-4 mb-6 border border-indigo-100 dark:border-indigo-800">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+              <span className="text-indigo-700 dark:text-indigo-300 font-medium">{slot?.time}</span>
+            </div>
+            <p className="text-indigo-600 dark:text-indigo-400 text-sm mt-2">
+              Are you sure you want to book this time slot?
+            </p>
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="mb-6">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Name
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                    setError("")
-                  }}
-                  className={`
-                    w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-offset-1 outline-none transition-all
-                    ${error ? "border-red-300 focus:ring-red-200" : "border-gray-300 focus:ring-blue-200"}
-                  `}
-                  placeholder="Enter your name"
-                  autoFocus
-                  disabled={isSubmitting}
-                />
-                <User className="absolute right-3 top-3.5 h-4 w-4 text-gray-400" />
-              </div>
-              {error && (
-                <motion.p
-                  className="mt-2 text-sm text-red-500"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  {error}
-                </motion.p>
-              )}
-            </div>
 
             <div className="flex gap-3">
               <motion.button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium text-sm"
-                whileHover={{ scale: 1.02, backgroundColor: "#f9fafb" }}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-sm dark:bg-gray-700 dark:hover:bg-gray-600"
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={isSubmitting}
               >
@@ -113,8 +77,8 @@ export default function BookingModal({ onClose, onConfirm, slot }: BookingModalP
               </motion.button>
               <motion.button
                 type="submit"
-                className="flex-1 px-4 py-2.5 rounded-lg bg-blue-500 text-white font-medium text-sm disabled:opacity-50"
-                whileHover={{ scale: 1.02, backgroundColor: "#3b82f6" }}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-500 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-medium text-sm disabled:opacity-50"
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={isSubmitting}
               >
