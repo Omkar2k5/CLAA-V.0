@@ -17,9 +17,9 @@ A modern, responsive web application for managing time slot bookings with real-t
 - 🎨 Modern UI with animations
 
 ## Demo Video
-https://github.com/yourusername/schedulo-lite/raw/main/public/demovideo.mp4
+https://github.com/Omkar2k5/Navikshaa-DevBatlleGround/blob/main/public/demovideo.mp4
 
-![Demo Video](https://github.com/yourusername/schedulo-lite/raw/main/public/demovideo.mp4)
+![Demo Video](https://github.com/Omkar2k5/Navikshaa-DevBatlleGround/blob/main/public/demovideo.mp4)
 
 ## Tech Stack
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, Framer Motion
