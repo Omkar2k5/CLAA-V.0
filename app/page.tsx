@@ -266,45 +266,6 @@ export default function BookingPage() {
               <TimeSlotGrid timeSlots={timeSlots} onBook={handleBookSlot} onCancel={handleCancelSlot} />
             )}
           </div>
-          
-          {/* Help section */}
-          <motion.div 
-            className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">How to Use Schedulo Lite</h2>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-full flex-shrink-0 mt-1">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-300 text-sm">1</span>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-800 dark:text-gray-200">Browse Available Slots</h3>
-                  <p className="text-gray-600 dark:text-gray-400">Look through the grid to find a time that works for you. Green slots are available, red slots are already booked.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-full flex-shrink-0 mt-1">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-300 text-sm">2</span>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-800 dark:text-gray-200">Book a Slot</h3>
-                  <p className="text-gray-600 dark:text-gray-400">Click the "Book" button on an available slot, enter your name, and confirm your booking.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-full flex-shrink-0 mt-1">
-                  <span className="font-bold text-indigo-600 dark:text-indigo-300 text-sm">3</span>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-800 dark:text-gray-200">Cancel if Needed</h3>
-                  <p className="text-gray-600 dark:text-gray-400">If your plans change, you can cancel your booking by clicking the "Cancel" button on your booked slot.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </motion.div>
       </main>
 
