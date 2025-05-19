@@ -17,9 +17,12 @@ A modern, responsive web application for managing time slot bookings with real-t
 - 🎨 Modern UI with animations
 
 ## Demo Video
-https://github.com/Omkar2k5/Navikshaa-DevBatlleGround/blob/main/public/demovideo.mp4
+<video width="100%" controls>
+  <source src="https://omkar2k5.github.io/Navikshaa-DevBatlleGround/demovideo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
-![Demo Video](https://github.com/Omkar2k5/Navikshaa-DevBatlleGround/blob/main/public/demovideo.mp4)
+> **Note**: If the video doesn't play directly in the README, you can [watch it here](https://omkar2k5.github.io/Navikshaa-DevBatlleGround/demovideo.mp4)
 
 ## Tech Stack
 - **Frontend**: Next.js, TypeScript, Tailwind CSS, Framer Motion
