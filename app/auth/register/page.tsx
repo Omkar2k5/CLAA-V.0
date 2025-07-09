@@ -50,8 +50,14 @@ export default function RegisterPage() {
     e.preventDefault()
 
     // Form validation
-    if (!name.trim() || !email.trim() || !password.trim() || !department.trim() || !employeeId.trim()) {
+    if (!name.trim() || !email.trim() || !password.trim() || !employeeId.trim()) {
       setFormError("All fields are required")
+      return
+    }
+
+    // Department is only required for teachers
+    if (role === 'teacher' && !department.trim()) {
+      setFormError("Department is required for teachers")
       return
     }
 
@@ -75,7 +81,7 @@ export default function RegisterPage() {
       setFormError("")
       clearError()
 
-      await register(name, email, password, role, department, employeeId)
+      await register(name, email, password, role, role === 'admin' ? 'Administration' : department, employeeId)
       router.push("/") // Redirect to home page after successful registration
     } catch (err: any) {
       setFormError(err.message || "Registration failed")
@@ -198,31 +204,33 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Department
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Building className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+            {role === 'teacher' && (
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Department
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Building className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <select
+                    id="department"
+                    name="department"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                    disabled={isSubmitting}
+                    required
+                  >
+                    {departments.map((dept: any) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select
-                  id="department"
-                  name="department"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                  disabled={isSubmitting}
-                  required
-                >
-                  {departments.map((dept: any) => (
-                    <option key={dept.id} value={dept.name}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
               </div>
-            </div>
+            )}
 
             <div>
               <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">

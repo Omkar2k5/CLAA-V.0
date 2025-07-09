@@ -7,7 +7,8 @@ interface LeaveBalance {
   id: string
   teacherId: string
   year: number
-  totalLeaves: number
+  month: number
+  totalMonthlyLeaves: number
   casualLeaves: {
     total: number
     taken: number
@@ -132,10 +133,10 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Leave Balance
+            Monthly Leave Balance
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Year {balance.year}
+            {new Date(balance.year, balance.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </p>
         </div>
         <div className="text-right">
@@ -154,11 +155,11 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="h-4 w-4 text-green-600" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Total Allocated
+              Monthly Allocation
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {balance.totalLeaves}
+            {balance.totalMonthlyLeaves}
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">

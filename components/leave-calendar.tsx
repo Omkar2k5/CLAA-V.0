@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight, Calendar, User, Clock } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ChevronLeft, ChevronRight, Calendar, User, Clock, X, MapPin } from "lucide-react"
 
 interface LeaveApplication {
   id: string
@@ -30,6 +30,7 @@ interface CalendarDay {
 export default function LeaveCalendar({ applications, isLoading = false }: LeaveCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([])
+  const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null)
 
   const leaveTypeColors = {
     casual: 'bg-blue-500',
@@ -206,11 +207,13 @@ export default function LeaveCalendar({ applications, isLoading = false }: Leave
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: index * 0.01 }}
+            onClick={() => day.leaves.length > 0 && setSelectedDay(day)}
             className={`
               min-h-[80px] p-2 border border-gray-200 dark:border-gray-600 rounded-lg
               ${day.isCurrentMonth ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}
               ${isToday(day.date) ? 'ring-2 ring-blue-500' : ''}
-              hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors
+              ${day.leaves.length > 0 ? 'cursor-pointer hover:shadow-md' : ''}
+              hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200
             `}
           >
             <div className={`
@@ -223,25 +226,38 @@ export default function LeaveCalendar({ applications, isLoading = false }: Leave
             
             {/* Leave indicators */}
             <div className="space-y-1">
-              {day.leaves.slice(0, 3).map((leave, leaveIndex) => (
+              {day.leaves.slice(0, 2).map((leave, leaveIndex) => (
                 <div
                   key={leaveIndex}
                   className={`
-                    text-xs px-2 py-1 rounded text-white truncate
+                    text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity
                     ${leaveTypeColors[leave.leaveType]}
                   `}
-                  title={`${leave.teacherName} - ${leaveTypeLabels[leave.leaveType]} Leave`}
+                  title={`${leave.teacherName} (${leave.teacherDepartment}) - ${leaveTypeLabels[leave.leaveType]} Leave\nDuration: ${leave.daysCount} day${leave.daysCount > 1 ? 's' : ''}\nStatus: ${leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}`}
                 >
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    <span className="truncate">{leave.teacherName?.split(' ')[0]}</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 min-w-0">
+                      <User className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate font-medium">
+                        {leave.teacherName?.split(' ')[0]}
+                      </span>
+                    </div>
+                    <span className="text-xs opacity-75 flex-shrink-0">
+                      {leaveTypeLabels[leave.leaveType].charAt(0)}
+                    </span>
+                  </div>
+                  <div className="text-xs opacity-75 truncate">
+                    {leave.teacherDepartment}
                   </div>
                 </div>
               ))}
-              
-              {day.leaves.length > 3 && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
-                  +{day.leaves.length - 3} more
+
+              {day.leaves.length > 2 && (
+                <div
+                  className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                  title={`View all ${day.leaves.length} leave applications for this date:\n${day.leaves.map(l => `• ${l.teacherName} (${leaveTypeLabels[l.leaveType]})`).join('\n')}`}
+                >
+                  +{day.leaves.length - 2} more staff
                 </div>
               )}
             </div>
@@ -277,6 +293,104 @@ export default function LeaveCalendar({ applications, isLoading = false }: Leave
           })}
         </div>
       </div>
+
+      {/* Day Detail Modal */}
+      <AnimatePresence>
+        {selectedDay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setSelectedDay(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                      Leave Details
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {selectedDay.date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedDay(null)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {selectedDay.leaves.map((leave, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full ${leaveTypeColors[leave.leaveType]}`}></div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                              {leave.teacherName}
+                            </h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                              <MapPin className="h-3 w-3" />
+                              <span>{leave.teacherDepartment}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`
+                          px-2 py-1 rounded-full text-xs font-medium
+                          ${leave.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            leave.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}
+                        `}>
+                          {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Leave Type:</span>
+                          <span className="ml-2 text-gray-600 dark:text-gray-400">
+                            {leaveTypeLabels[leave.leaveType]}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+                          <span className="ml-2 text-gray-600 dark:text-gray-400">
+                            {leave.daysCount} day{leave.daysCount > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="md:col-span-2">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Period:</span>
+                          <span className="ml-2 text-gray-600 dark:text-gray-400">
+                            {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

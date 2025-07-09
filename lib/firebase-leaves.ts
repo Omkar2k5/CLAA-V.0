@@ -38,7 +38,8 @@ export interface LeaveBalance {
   id: string;
   teacherId: string;
   year: number;
-  totalLeaves: number;
+  month: number; // 0-11 (January = 0, December = 11)
+  totalMonthlyLeaves: number;
   casualLeaves: {
     total: number;
     taken: number;
@@ -70,20 +71,23 @@ const calculateDays = (startDate: string, endDate: string): number => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 };
 
-// Create leave balance for a user
-export const createLeaveBalance = async (teacherId: string, totalLeaves: number): Promise<void> => {
-  const currentYear = new Date().getFullYear();
-  const balanceId = `${teacherId}_${currentYear}`;
-  
+// Create monthly leave balance for a user
+export const createLeaveBalance = async (teacherId: string, totalMonthlyLeaves: number): Promise<void> => {
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const balanceId = `${teacherId}_${currentYear}_${currentMonth}`;
+
   const balance: LeaveBalance = {
     id: balanceId,
     teacherId,
     year: currentYear,
-    totalLeaves,
-    casualLeaves: { total: 12, taken: 0, remaining: 12 },
-    sickLeaves: { total: 10, taken: 0, remaining: 10 },
-    emergencyLeaves: { total: 5, taken: 0, remaining: 5 },
-    otherLeaves: { total: Math.max(0, totalLeaves - 27), taken: 0, remaining: Math.max(0, totalLeaves - 27) },
+    month: currentMonth,
+    totalMonthlyLeaves,
+    casualLeaves: { total: 3, taken: 0, remaining: 3 }, // 3 casual leaves per month
+    sickLeaves: { total: 2, taken: 0, remaining: 2 }, // 2 sick leaves per month
+    emergencyLeaves: { total: 1, taken: 0, remaining: 1 }, // 1 emergency leave per month
+    otherLeaves: { total: 1, taken: 0, remaining: 1 }, // 1 other leave per month
     lastUpdated: new Date().toISOString()
   };
 
@@ -95,16 +99,21 @@ export const createLeaveBalance = async (teacherId: string, totalLeaves: number)
   }
 };
 
-// Get leave balance for a user
+// Get leave balance for a user for current month
 export const getLeaveBalance = async (teacherId: string): Promise<LeaveBalance | null> => {
-  const currentYear = new Date().getFullYear();
-  const balanceId = `${teacherId}_${currentYear}`;
-  
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const balanceId = `${teacherId}_${currentYear}_${currentMonth}`;
+
   try {
     const balanceDoc = await getDoc(doc(db, 'leaveBalances', balanceId));
-    
+
     if (!balanceDoc.exists()) {
-      return null;
+      // If current month balance doesn't exist, create it
+      await createLeaveBalance(teacherId, 7); // 7 total monthly leaves (3+2+1+1)
+      const newBalanceDoc = await getDoc(doc(db, 'leaveBalances', balanceId));
+      return newBalanceDoc.exists() ? { id: newBalanceDoc.id, ...newBalanceDoc.data() } as LeaveBalance : null;
     }
 
     return { id: balanceDoc.id, ...balanceDoc.data() } as LeaveBalance;
@@ -257,14 +266,16 @@ export const approveLeave = async (
       updatedAt: new Date().toISOString()
     });
 
-    // Update leave balance
-    const currentYear = new Date().getFullYear();
-    const balanceId = `${leaveData.teacherId}_${currentYear}`;
+    // Update leave balance for the month when leave was applied
+    const leaveDate = new Date(leaveData.startDate);
+    const leaveYear = leaveDate.getFullYear();
+    const leaveMonth = leaveDate.getMonth();
+    const balanceId = `${leaveData.teacherId}_${leaveYear}_${leaveMonth}`;
     const balanceDoc = await getDoc(doc(db, 'leaveBalances', balanceId));
-    
+
     if (balanceDoc.exists()) {
       const balance = balanceDoc.data() as LeaveBalance;
-      
+
       switch (leaveData.leaveType) {
         case 'casual':
           balance.casualLeaves.taken += leaveData.daysCount;
@@ -282,7 +293,7 @@ export const approveLeave = async (
           balance.otherLeaves.taken += leaveData.daysCount;
           balance.otherLeaves.remaining -= leaveData.daysCount;
       }
-      
+
       balance.lastUpdated = new Date().toISOString();
       await updateDoc(doc(db, 'leaveBalances', balanceId), balance);
     }

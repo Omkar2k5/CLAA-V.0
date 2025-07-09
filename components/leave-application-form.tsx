@@ -22,10 +22,10 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const leaveTypes = [
-    { value: 'casual', label: 'Casual Leave', maxDays: 12 },
-    { value: 'sick', label: 'Sick Leave', maxDays: 10 },
-    { value: 'emergency', label: 'Emergency Leave', maxDays: 5 },
-    { value: 'other', label: 'Other Leave', maxDays: 10 }
+    { value: 'casual', label: 'Casual Leave', maxDays: 3 },
+    { value: 'sick', label: 'Sick Leave', maxDays: 2 },
+    { value: 'emergency', label: 'Emergency Leave', maxDays: 1 },
+    { value: 'other', label: 'Other Leave', maxDays: 1 }
   ]
 
   const validateForm = () => {
@@ -59,7 +59,7 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
       const selectedLeaveType = leaveTypes.find(lt => lt.value === formData.leaveType)
       
       if (selectedLeaveType && diffDays > selectedLeaveType.maxDays) {
-        newErrors.endDate = `${selectedLeaveType.label} cannot exceed ${selectedLeaveType.maxDays} days`
+        newErrors.endDate = `${selectedLeaveType.label} cannot exceed ${selectedLeaveType.maxDays} days per month`
       }
     }
 
@@ -191,7 +191,7 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
           >
             {leaveTypes.map((type) => (
               <option key={type.value} value={type.value}>
-                {type.label} (Max: {type.maxDays} days)
+                {type.label} (Max: {type.maxDays} days/month)
               </option>
             ))}
           </select>
