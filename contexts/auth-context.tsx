@@ -11,7 +11,7 @@ import {
   isAdmin as checkIsAdmin,
   type User
 } from "@/lib/firebase-auth"
-import { createLeaveBalance } from "@/lib/firebase-leaves"
+
 
 // Types are now imported from firebase-auth
 
@@ -111,9 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         department,
         employeeId
       )
-
-      // Create leave balance for the new user
-      await createLeaveBalance(userData.id, userData.totalLeaves)
 
       setUser(userData)
     } catch (err: any) {

@@ -7,6 +7,8 @@ import { Plus, Calendar, BarChart3, Users } from "lucide-react"
 import LeaveApplicationForm from "@/components/leave-application-form"
 import LeaveApplicationsList from "@/components/leave-applications-list"
 import LeaveBalanceCard from "@/components/leave-balance-card"
+import LeaveCalendar from "@/components/leave-calendar"
+import MonthlyLeaveTracking from "@/components/monthly-leave-tracking"
 import LoadingSpinner from "@/components/loading-spinner"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserProfile } from "@/components/user-profile"
@@ -53,15 +55,18 @@ export default function LeaveManagementPage() {
       console.log("Fetching leave data...")
       setIsDataLoading(true)
 
-      // Fetch leave applications and balance in parallel
-      const [applications, balance] = await Promise.all([
-        getLeaveApplications(user),
-        getLeaveBalance(user.id)
-      ])
-
-      console.log("Leave data fetched:", { applications: applications.length, balance: !!balance })
+      // Fetch leave applications
+      const applications = await getLeaveApplications(user)
       setLeaveApplications(applications)
-      setLeaveBalance(balance)
+
+      // Only fetch leave balance for teachers
+      if (user.role === 'teacher') {
+        const balance = await getLeaveBalance(user.id)
+        setLeaveBalance(balance)
+        console.log("Leave data fetched:", { applications: applications.length, balance: !!balance })
+      } else {
+        console.log("Leave data fetched:", { applications: applications.length, userRole: user.role })
+      }
     } catch (error) {
       console.error("Error fetching leave data:", error)
       toast.error("Failed to load leave data")
@@ -126,7 +131,10 @@ export default function LeaveManagementPage() {
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     ...(user?.role === 'teacher' ? [{ id: 'apply', label: 'Apply Leave', icon: Plus }] : []),
     { id: 'applications', label: isAdmin() ? 'Leave Applications' : 'My Applications', icon: Calendar },
-    ...(isAdmin() ? [{ id: 'users', label: 'Manage Users', icon: Users }] : [])
+    ...(isAdmin() ? [
+      { id: 'calendar', label: 'Leave Calendar', icon: Calendar },
+      { id: 'tracking', label: 'Monthly Tracking', icon: BarChart3 }
+    ] : [])
   ]
 
   // Show loading spinner while checking authentication
@@ -179,7 +187,7 @@ export default function LeaveManagementPage() {
                 🎓 College Leave Management
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Welcome, {user.name} ({user.role.toUpperCase()}) - {user.department}
+                Welcome, {user.name} ({user.role === 'admin' ? 'HOD/Principal' : 'Teacher'}) - {user.department}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -235,17 +243,35 @@ export default function LeaveManagementPage() {
               transition={{ duration: 0.3 }}
             >
               {activeTab === 'dashboard' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <LeaveApplicationsList
-                      applications={leaveApplications.slice(0, 5)} // Show recent applications
-                      onApprove={handleApproveLeave}
-                      onReject={handleRejectLeave}
-                    />
-                  </div>
-                  <div>
-                    {leaveBalance && <LeaveBalanceCard balance={leaveBalance} />}
-                  </div>
+                <div className="space-y-6">
+                  {user?.role === 'teacher' ? (
+                    // Teacher Dashboard
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="lg:col-span-2">
+                        <LeaveApplicationsList
+                          applications={leaveApplications.slice(0, 5)} // Show recent applications
+                          onApprove={handleApproveLeave}
+                          onReject={handleRejectLeave}
+                        />
+                      </div>
+                      <div>
+                        {leaveBalance && <LeaveBalanceCard balance={leaveBalance} />}
+                      </div>
+                    </div>
+                  ) : (
+                    // Admin Dashboard
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <LeaveCalendar applications={leaveApplications} isLoading={isDataLoading} />
+                        <MonthlyLeaveTracking applications={leaveApplications} isLoading={isDataLoading} />
+                      </div>
+                      <LeaveApplicationsList
+                        applications={leaveApplications.slice(0, 5)} // Show recent applications
+                        onApprove={handleApproveLeave}
+                        onReject={handleRejectLeave}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -264,15 +290,12 @@ export default function LeaveManagementPage() {
                 />
               )}
 
-              {activeTab === 'users' && isAdmin() && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    User Management
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    User management features coming soon...
-                  </p>
-                </div>
+              {activeTab === 'calendar' && isAdmin() && (
+                <LeaveCalendar applications={leaveApplications} isLoading={isDataLoading} />
+              )}
+
+              {activeTab === 'tracking' && isAdmin() && (
+                <MonthlyLeaveTracking applications={leaveApplications} isLoading={isDataLoading} />
               )}
             </motion.div>
           </AnimatePresence>

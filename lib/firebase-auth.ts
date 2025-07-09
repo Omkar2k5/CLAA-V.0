@@ -98,6 +98,12 @@ export const registerUser = async (
 
     await setDoc(doc(db, 'users', firebaseUser.uid), userData);
 
+    // Only create leave balance for teachers, not for admins
+    if (role === 'teacher') {
+      const { createLeaveBalance } = await import('./firebase-leaves');
+      await createLeaveBalance(firebaseUser.uid, userData.totalLeaves);
+    }
+
     return userData;
   } catch (error: any) {
     console.error('Error registering user:', error);
