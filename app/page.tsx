@@ -22,6 +22,7 @@ import {
   rejectLeave
 } from "@/lib/firebase-leaves"
 
+
 export default function LeaveManagementPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [leaveApplications, setLeaveApplications] = useState([])
@@ -126,6 +127,8 @@ export default function LeaveManagementPage() {
       toast.error(error.message || "Failed to reject leave")
     }
   }
+
+
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -262,12 +265,14 @@ export default function LeaveManagementPage() {
                   ) : (
                     // Admin Dashboard
                     <div className="space-y-6">
+
+
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <LeaveCalendar applications={leaveApplications} isLoading={isDataLoading} />
                         <MonthlyLeaveTracking applications={leaveApplications} isLoading={isDataLoading} />
                       </div>
                       <LeaveApplicationsList
-                        applications={leaveApplications.slice(0, 5)} // Show recent applications
+                        applications={leaveApplications.slice(0, 10)} // Show more applications for admins
                         onApprove={handleApproveLeave}
                         onReject={handleRejectLeave}
                       />

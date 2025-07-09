@@ -26,32 +26,45 @@ interface LeaveBalanceCardProps {
 }
 
 export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBalanceCardProps) {
+  // Provide default values for backward compatibility
+  const safeBalance = {
+    ...balance,
+    totalTaken: balance.totalTaken || 0,
+    totalRemaining: balance.totalRemaining || balance.totalMonthlyLeaves || 5,
+    leavesByType: balance.leavesByType || {
+      casual: 0,
+      sick: 0,
+      emergency: 0,
+      other: 0
+    }
+  }
+
   const leaveCategories = [
     {
       name: 'Casual Leave',
       code: 'CL',
-      taken: balance.leavesByType.casual,
+      taken: safeBalance.leavesByType.casual,
       color: 'blue',
       icon: Calendar
     },
     {
       name: 'Sick Leave',
       code: 'SL',
-      taken: balance.leavesByType.sick,
+      taken: safeBalance.leavesByType.sick,
       color: 'red',
       icon: TrendingDown
     },
     {
       name: 'Emergency Leave',
       code: 'EL',
-      taken: balance.leavesByType.emergency,
+      taken: safeBalance.leavesByType.emergency,
       color: 'orange',
       icon: Clock
     },
     {
       name: 'Other Leave',
       code: 'OL',
-      taken: balance.leavesByType.other,
+      taken: safeBalance.leavesByType.other,
       color: 'purple',
       icon: TrendingUp
     }
@@ -119,12 +132,12 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
             Monthly Leave Balance
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            {new Date(balance.year, balance.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {new Date(safeBalance.year, safeBalance.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </p>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {balance.totalRemaining}
+            {safeBalance.totalRemaining}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Days Remaining
@@ -142,7 +155,7 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {balance.totalMonthlyLeaves}
+            {safeBalance.totalMonthlyLeaves}
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -153,7 +166,7 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {balance.totalTaken}
+            {safeBalance.totalTaken}
           </div>
         </div>
       </div>
@@ -166,28 +179,28 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
               Monthly Leave Usage
             </span>
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              {balance.totalTaken} / {balance.totalMonthlyLeaves} days used
+              {safeBalance.totalTaken} / {safeBalance.totalMonthlyLeaves} days used
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${(balance.totalTaken / balance.totalMonthlyLeaves) * 100}%` }}
+              animate={{ width: `${(safeBalance.totalTaken / safeBalance.totalMonthlyLeaves) * 100}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
               className={`h-3 rounded-full ${
-                balance.totalRemaining <= 1 ? 'bg-red-600' :
-                balance.totalRemaining <= 2 ? 'bg-yellow-600' : 'bg-green-600'
+                safeBalance.totalRemaining <= 1 ? 'bg-red-600' :
+                safeBalance.totalRemaining <= 2 ? 'bg-yellow-600' : 'bg-green-600'
               }`}
             />
           </div>
           <div className="mt-2 text-center">
             <span className={`text-sm font-medium ${
-              balance.totalRemaining <= 1 ? 'text-red-600' :
-              balance.totalRemaining <= 2 ? 'text-yellow-600' : 'text-green-600'
+              safeBalance.totalRemaining <= 1 ? 'text-red-600' :
+              safeBalance.totalRemaining <= 2 ? 'text-yellow-600' : 'text-green-600'
             }`}>
-              {balance.totalRemaining === 0 ? '⚠️ No leaves remaining this month' :
-               balance.totalRemaining <= 2 ? `⚠️ Only ${balance.totalRemaining} days left` :
-               `✅ ${balance.totalRemaining} days remaining`}
+              {safeBalance.totalRemaining === 0 ? '⚠️ No leaves remaining this month' :
+               safeBalance.totalRemaining <= 2 ? `⚠️ Only ${safeBalance.totalRemaining} days left` :
+               `✅ ${safeBalance.totalRemaining} days remaining`}
             </span>
           </div>
         </div>
@@ -240,7 +253,7 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
       {/* Last Updated */}
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-          Last updated: {new Date(balance.lastUpdated).toLocaleString()}
+          Last updated: {new Date(safeBalance.lastUpdated).toLocaleString()}
         </p>
       </div>
     </motion.div>

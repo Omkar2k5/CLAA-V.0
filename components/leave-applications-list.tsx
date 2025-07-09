@@ -28,11 +28,11 @@ interface LeaveApplicationsListProps {
   isLoading?: boolean
 }
 
-export default function LeaveApplicationsList({ 
-  applications, 
-  onApprove, 
-  onReject, 
-  isLoading = false 
+export default function LeaveApplicationsList({
+  applications,
+  onApprove,
+  onReject,
+  isLoading = false
 }: LeaveApplicationsListProps) {
   const { user, isAdmin } = useAuth()
 
@@ -122,14 +122,66 @@ export default function LeaveApplicationsList({
     },
   }
 
+  const pendingApplications = applications.filter(app => app.status === 'pending')
+  const approvedApplications = applications.filter(app => app.status === 'approved')
+  const rejectedApplications = applications.filter(app => app.status === 'rejected')
+
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="space-y-4"
-    >
-      {applications.map((application) => (
+    <div className="space-y-6">
+      {/* Admin Status Header */}
+      {isAdmin() && (
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200">
+                📋 Admin Dashboard
+              </h3>
+              <p className="text-blue-600 dark:text-blue-400 text-sm">
+                You have administrative privileges to approve/reject leave applications
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 rounded-lg">
+                <div className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                  {pendingApplications.length}
+                </div>
+                <div className="text-xs text-yellow-600 dark:text-yellow-400">Pending</div>
+              </div>
+              <div className="bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
+                <div className="text-lg font-bold text-green-800 dark:text-green-200">
+                  {approvedApplications.length}
+                </div>
+                <div className="text-xs text-green-600 dark:text-green-400">Approved</div>
+              </div>
+              <div className="bg-red-100 dark:bg-red-900/30 px-3 py-2 rounded-lg">
+                <div className="text-lg font-bold text-red-800 dark:text-red-200">
+                  {rejectedApplications.length}
+                </div>
+                <div className="text-xs text-red-600 dark:text-red-400">Rejected</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-4"
+      >
+      {/* Sort applications to show pending ones first for admins */}
+      {[...applications]
+        .sort((a, b) => {
+          if (isAdmin()) {
+            // For admins, show pending applications first
+            if (a.status === 'pending' && b.status !== 'pending') return -1;
+            if (a.status !== 'pending' && b.status === 'pending') return 1;
+          }
+          // Then sort by application date (newest first)
+          return new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime();
+        })
+        .map((application) => (
         <motion.div
           key={application.id}
           variants={item}
@@ -199,26 +251,52 @@ export default function LeaveApplicationsList({
 
             {/* Actions */}
             {isAdmin() && application.status === 'pending' && (
-              <div className="flex flex-col sm:flex-row gap-2 lg:flex-col">
+              <div className="flex flex-col gap-2 min-w-[120px]">
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 px-2 py-1 rounded text-center">
+                  <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">
+                    ⏳ Awaiting Review
+                  </span>
+                </div>
                 <button
                   onClick={() => handleAction(application.id, 'approve')}
                   disabled={isLoading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
                 >
-                  Approve
+                  ✅ Approve
                 </button>
                 <button
                   onClick={() => handleAction(application.id, 'reject')}
                   disabled={isLoading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
                 >
-                  Reject
+                  ❌ Reject
                 </button>
+              </div>
+            )}
+
+            {/* Status Display for Non-Pending Applications */}
+            {application.status !== 'pending' && (
+              <div className="flex flex-col gap-2 min-w-[120px]">
+                <div className={`px-3 py-2 rounded-lg text-center ${
+                  application.status === 'approved'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                }`}>
+                  <span className="text-sm font-medium">
+                    {application.status === 'approved' ? '✅ Approved' : '❌ Rejected'}
+                  </span>
+                  {application.reviewedDate && (
+                    <div className="text-xs opacity-75 mt-1">
+                      {new Date(application.reviewedDate).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </motion.div>
       ))}
     </motion.div>
+    </div>
   )
 }

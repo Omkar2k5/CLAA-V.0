@@ -91,6 +91,43 @@ export const createLeaveBalance = async (teacherId: string, totalMonthlyLeaves: 
   }
 };
 
+// Migrate old leave balance format to new format
+const migrateLeaveBalance = async (balanceId: string, oldBalance: any): Promise<void> => {
+  try {
+    // Check if it's already in new format
+    if (oldBalance.totalTaken !== undefined && oldBalance.leavesByType !== undefined) {
+      return; // Already migrated
+    }
+
+    // Calculate totals from old format
+    const casualTaken = oldBalance.casualLeaves?.taken || 0;
+    const sickTaken = oldBalance.sickLeaves?.taken || 0;
+    const emergencyTaken = oldBalance.emergencyLeaves?.taken || 0;
+    const otherTaken = oldBalance.otherLeaves?.taken || 0;
+
+    const totalTaken = casualTaken + sickTaken + emergencyTaken + otherTaken;
+    const totalRemaining = 5 - totalTaken;
+
+    const newBalance: Partial<LeaveBalance> = {
+      totalMonthlyLeaves: 5,
+      totalTaken,
+      totalRemaining: Math.max(0, totalRemaining),
+      leavesByType: {
+        casual: casualTaken,
+        sick: sickTaken,
+        emergency: emergencyTaken,
+        other: otherTaken
+      },
+      lastUpdated: new Date().toISOString()
+    };
+
+    await updateDoc(doc(db, 'leaveBalances', balanceId), newBalance);
+    console.log('Migrated leave balance:', balanceId);
+  } catch (error) {
+    console.error('Error migrating leave balance:', error);
+  }
+};
+
 // Get leave balance for a user for current month
 export const getLeaveBalance = async (teacherId: string): Promise<LeaveBalance | null> => {
   const currentDate = new Date();
@@ -108,7 +145,17 @@ export const getLeaveBalance = async (teacherId: string): Promise<LeaveBalance |
       return newBalanceDoc.exists() ? { id: newBalanceDoc.id, ...newBalanceDoc.data() } as LeaveBalance : null;
     }
 
-    return { id: balanceDoc.id, ...balanceDoc.data() } as LeaveBalance;
+    const balanceData = balanceDoc.data();
+
+    // Check if migration is needed
+    if (balanceData.totalTaken === undefined || balanceData.leavesByType === undefined) {
+      await migrateLeaveBalance(balanceId, balanceData);
+      // Fetch the updated document
+      const updatedDoc = await getDoc(doc(db, 'leaveBalances', balanceId));
+      return updatedDoc.exists() ? { id: updatedDoc.id, ...updatedDoc.data() } as LeaveBalance : null;
+    }
+
+    return { id: balanceDoc.id, ...balanceData } as LeaveBalance;
   } catch (error) {
     console.error('Error fetching leave balance:', error);
     return null;
@@ -167,10 +214,12 @@ export const applyForLeave = async (
 // Get leave applications for a user or all (for admins)
 export const getLeaveApplications = async (user: User): Promise<LeaveApplication[]> => {
   try {
+    console.log('getLeaveApplications called for user:', user.role, user.name);
     let querySnapshot;
 
     if (user.role === 'teacher') {
       // Teachers can only see their own leaves - simple query without orderBy to avoid index issues
+      console.log('Fetching applications for teacher:', user.id);
       const q = query(
         collection(db, 'leaveApplications'),
         where('teacherId', '==', user.id)
@@ -178,8 +227,11 @@ export const getLeaveApplications = async (user: User): Promise<LeaveApplication
       querySnapshot = await getDocs(q);
     } else {
       // HODs/Principals can see all leaves - simple query without complex ordering
+      console.log('Fetching all applications for admin user');
       querySnapshot = await getDocs(collection(db, 'leaveApplications'));
     }
+
+    console.log('Found', querySnapshot.docs.length, 'leave applications');
 
     const applications: LeaveApplication[] = [];
 
@@ -188,11 +240,15 @@ export const getLeaveApplications = async (user: User): Promise<LeaveApplication
       const appData = { id: docSnapshot.id, ...docSnapshot.data() } as LeaveApplication;
 
       // Get teacher info
+      console.log('Fetching teacher info for teacherId:', appData.teacherId);
       const teacherDoc = await getDoc(doc(db, 'users', appData.teacherId));
       if (teacherDoc.exists()) {
         const teacherData = teacherDoc.data();
         appData.teacherName = teacherData.name;
         appData.teacherDepartment = teacherData.department;
+        console.log('Found teacher:', teacherData.name, 'from', teacherData.department);
+      } else {
+        console.log('Teacher document not found for ID:', appData.teacherId);
       }
 
       return appData;
@@ -205,13 +261,9 @@ export const getLeaveApplications = async (user: User): Promise<LeaveApplication
       new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime()
     );
 
-    // For HODs, filter by department after fetching
-    if (user.role === 'admin') {
-      return applicationsWithTeacherInfo.filter(app =>
-        app.teacherDepartment === user.department
-      );
-    }
-
+    // Admin users can see all applications (no department filtering)
+    // Since they are HOD/Principal, they should see all applications across departments
+    console.log('Returning', applicationsWithTeacherInfo.length, 'applications for user:', user.role);
     return applicationsWithTeacherInfo;
   } catch (error) {
     console.error('Error fetching leave applications:', error);
