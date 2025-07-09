@@ -24,14 +24,16 @@ export default function LeaveManagementPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [leaveApplications, setLeaveApplications] = useState([])
   const [leaveBalance, setLeaveBalance] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isDataLoading, setIsDataLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, isLoading } = useAuth()
   const router = useRouter()
 
   // Redirect to login if not authenticated
   useEffect(() => {
+    console.log("Auth state:", { user: !!user, isLoading })
     if (!user && !isLoading) {
+      console.log("Redirecting to login...")
       router.push("/auth/login")
     }
   }, [user, isLoading, router])
@@ -39,6 +41,7 @@ export default function LeaveManagementPage() {
   // Fetch data when component mounts or user changes
   useEffect(() => {
     if (user) {
+      console.log("User found, fetching leave data...")
       fetchLeaveData()
     }
   }, [user])
@@ -47,7 +50,8 @@ export default function LeaveManagementPage() {
     if (!user) return
 
     try {
-      setIsLoading(true)
+      console.log("Fetching leave data...")
+      setIsDataLoading(true)
 
       // Fetch leave applications and balance in parallel
       const [applications, balance] = await Promise.all([
@@ -55,13 +59,14 @@ export default function LeaveManagementPage() {
         getLeaveBalance(user.id)
       ])
 
+      console.log("Leave data fetched:", { applications: applications.length, balance: !!balance })
       setLeaveApplications(applications)
       setLeaveBalance(balance)
     } catch (error) {
       console.error("Error fetching leave data:", error)
       toast.error("Failed to load leave data")
     } finally {
-      setIsLoading(false)
+      setIsDataLoading(false)
     }
   }
 
@@ -126,16 +131,37 @@ export default function LeaveManagementPage() {
 
   // Show loading spinner while checking authentication
   if (isLoading) {
+    console.log("Showing loading spinner...")
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <LoadingSpinner />
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Initializing application...
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            If this takes too long, try <a href="/debug" className="text-blue-600 hover:underline">debugging</a>
+          </p>
+        </div>
       </div>
     )
   }
 
   // Don't render anything if user is not authenticated (will redirect)
   if (!user) {
-    return null
+    console.log("No user, should redirect to login...")
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400">
+            Redirecting to login...
+          </p>
+          <p className="mt-2 text-sm text-gray-500">
+            If you're not redirected, <a href="/auth/login" className="text-blue-600 hover:underline">click here</a>
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

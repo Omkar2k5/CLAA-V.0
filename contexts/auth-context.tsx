@@ -9,9 +9,9 @@ import {
   signOutUser,
   getUserData,
   isAdmin as checkIsAdmin,
-  createLeaveBalance,
   type User
 } from "@/lib/firebase-auth"
+import { createLeaveBalance } from "@/lib/firebase-leaves"
 
 // Types are now imported from firebase-auth
 
@@ -38,17 +38,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Listen to Firebase auth state changes
   useEffect(() => {
+    console.log("Setting up Firebase auth listener...")
+
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log("Auth timeout reached, setting loading to false")
+      setIsLoading(false)
+    }, 5000) // 5 second timeout
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
-        setIsLoading(true)
+        console.log("Auth state changed:", firebaseUser ? "User signed in" : "User signed out")
+        clearTimeout(timeoutId) // Clear timeout since we got a response
         setError(null)
 
         if (firebaseUser) {
           // User is signed in, get user data from Firestore
+          console.log("Fetching user data for:", firebaseUser.uid)
           const userData = await getUserData(firebaseUser.uid)
+          console.log("User data fetched:", userData)
           setUser(userData)
         } else {
           // User is signed out
+          console.log("No user signed in")
           setUser(null)
         }
       } catch (err: any) {
@@ -56,12 +68,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(err.message || "Authentication error")
         setUser(null)
       } finally {
+        console.log("Setting loading to false")
         setIsLoading(false)
       }
     })
 
     // Cleanup subscription on unmount
-    return () => unsubscribe()
+    return () => {
+      console.log("Cleaning up auth listener")
+      clearTimeout(timeoutId)
+      unsubscribe()
+    }
   }, [])
 
   // Login function

@@ -18,14 +18,20 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+console.log("Firebase app initialized");
 
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
+console.log("Firebase Auth initialized");
 
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+console.log("Firestore initialized");
 
 // Initialize Analytics (only in browser environment)
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+if (analytics) {
+  console.log("Firebase Analytics initialized");
+}
 
 export default app;
