@@ -1,7 +1,7 @@
-# Schedulo Lite - Smart Session Booking System
+# College Leave Management System
 
 ## Project Overview
-Schedulo Lite is a modern, responsive web application for managing time slot bookings. It provides an intuitive interface for users to view, book, and cancel time slots with real-time updates and authentication.
+A comprehensive college leave management system built with Next.js and Firebase. The application enables teachers to apply for leaves and allows HODs/Principals to approve or reject leave applications with real-time updates and role-based access control.
 
 ## Tech Stack
 
@@ -13,34 +13,38 @@ Schedulo Lite is a modern, responsive web application for managing time slot boo
 - **State Management**: React Context API for auth state
 - **Form Handling**: React Hook Form
 - **UI Components**: Custom components with Radix UI primitives
+- **Notifications**: Sonner for toast notifications
 
-### Backend
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Authentication**: JWT-based session management
-- **CORS**: Enabled for cross-origin requests
-- **Data Storage**: In-memory storage (can be extended to use a database)
+### Backend & Database
+- **Database**: Firebase Firestore (NoSQL cloud database)
+- **Authentication**: Firebase Authentication (email/password)
+- **Real-time Updates**: Firestore real-time listeners
+- **Security**: Firebase Security Rules
+- **Hosting**: Firebase Hosting ready
 
 ## Project Structure
 
 ```
 ├── app/
-│   ├── page.tsx              # Main booking page
+│   ├── page.tsx              # Main leave management dashboard
 │   ├── auth/
 │   │   ├── login/           # Login page
-│   │   └── register/        # Registration page
+│   │   └── register/        # Registration page (with role selection)
 │   └── layout.tsx           # Root layout
 ├── components/
-│   ├── time-slot-grid.tsx   # Time slot display component
-│   ├── booking-modal.tsx    # Booking confirmation modal
-│   ├── cancel-modal.tsx     # Cancellation confirmation modal
-│   ├── loading-spinner.tsx  # Loading indicator
-│   ├── theme-toggle.tsx     # Dark/light mode toggle
-│   └── user-profile.tsx     # User profile component
+│   ├── leave-application-form.tsx    # Leave application form
+│   ├── leave-applications-list.tsx   # Display leave applications
+│   ├── leave-balance-card.tsx        # Leave balance display
+│   ├── loading-spinner.tsx           # Loading indicator
+│   ├── theme-toggle.tsx              # Dark/light mode toggle
+│   └── user-profile.tsx              # User profile component
 ├── contexts/
-│   └── auth-context.tsx     # Authentication context
-├── server.js                # Backend server
-└── package.json            # Project dependencies
+│   └── auth-context.tsx              # Firebase authentication context
+├── lib/
+│   ├── firebase.ts                   # Firebase configuration
+│   ├── firebase-auth.ts              # Authentication services
+│   └── firebase-leaves.ts            # Leave management services
+└── package.json                     # Project dependencies
 ```
 
 ## Data Flow

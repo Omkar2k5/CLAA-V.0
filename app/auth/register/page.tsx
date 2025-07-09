@@ -6,9 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { User, Mail, Lock, ArrowRight, AlertCircle, Building, UserCheck, IdCard } from "lucide-react"
-
-// API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+import { getDepartments, initializeDefaultDepartments } from "@/lib/firebase-auth"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -31,13 +29,17 @@ export default function RegisterPage() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch(`${API_URL}/departments`)
-      if (response.ok) {
-        const data = await response.json()
-        setDepartments(data.data || [])
-        if (data.data && data.data.length > 0) {
-          setDepartment(data.data[0].name)
-        }
+      let depts = await getDepartments()
+
+      // If no departments exist, initialize default ones
+      if (depts.length === 0) {
+        await initializeDefaultDepartments()
+        depts = await getDepartments()
+      }
+
+      setDepartments(depts)
+      if (depts.length > 0) {
+        setDepartment(depts[0].name)
       }
     } catch (error) {
       console.error("Error fetching departments:", error)

@@ -12,9 +12,13 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { UserProfile } from "@/components/user-profile"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
-
-// API URL - use environment variable or default to localhost
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+import {
+  getLeaveApplications,
+  getLeaveBalance,
+  applyForLeave,
+  approveLeave,
+  rejectLeave
+} from "@/lib/firebase-leaves"
 
 export default function LeaveManagementPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -22,7 +26,7 @@ export default function LeaveManagementPage() {
   const [leaveBalance, setLeaveBalance] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { user, token, isAdmin } = useAuth()
+  const { user, isAdmin } = useAuth()
   const router = useRouter()
 
   // Redirect to login if not authenticated
@@ -34,34 +38,25 @@ export default function LeaveManagementPage() {
 
   // Fetch data when component mounts or user changes
   useEffect(() => {
-    if (user && token) {
+    if (user) {
       fetchLeaveData()
     }
-  }, [user, token])
+  }, [user])
 
   const fetchLeaveData = async () => {
+    if (!user) return
+
     try {
       setIsLoading(true)
 
       // Fetch leave applications and balance in parallel
-      const [applicationsResponse, balanceResponse] = await Promise.all([
-        fetch(`${API_URL}/leaves`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API_URL}/balance`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      const [applications, balance] = await Promise.all([
+        getLeaveApplications(user),
+        getLeaveBalance(user.id)
       ])
 
-      if (applicationsResponse.ok) {
-        const applicationsData = await applicationsResponse.json()
-        setLeaveApplications(applicationsData.data || [])
-      }
-
-      if (balanceResponse.ok) {
-        const balanceData = await balanceResponse.json()
-        setLeaveBalance(balanceData.data)
-      }
+      setLeaveApplications(applications)
+      setLeaveBalance(balance)
     } catch (error) {
       console.error("Error fetching leave data:", error)
       toast.error("Failed to load leave data")
@@ -71,28 +66,24 @@ export default function LeaveManagementPage() {
   }
 
   const handleLeaveApplication = async (leaveData: any) => {
+    if (!user) return
+
     try {
       setIsSubmitting(true)
 
-      const response = await fetch(`${API_URL}/leaves/apply`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(leaveData)
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to submit leave application")
-      }
+      await applyForLeave(
+        user.id,
+        leaveData.startDate,
+        leaveData.endDate,
+        leaveData.leaveType,
+        leaveData.reason,
+        leaveData.attachments || []
+      )
 
       toast.success("Leave application submitted successfully!")
       setActiveTab('applications')
       await fetchLeaveData() // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting leave application:", error)
       toast.error(error.message || "Failed to submit leave application")
     } finally {
@@ -101,50 +92,26 @@ export default function LeaveManagementPage() {
   }
 
   const handleApproveLeave = async (leaveId: string, comments?: string) => {
+    if (!user) return
+
     try {
-      const response = await fetch(`${API_URL}/leaves/${leaveId}/approve`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ comments })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to approve leave")
-      }
-
+      await approveLeave(leaveId, user.id, comments || '')
       toast.success("Leave application approved successfully!")
       await fetchLeaveData() // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error approving leave:", error)
       toast.error(error.message || "Failed to approve leave")
     }
   }
 
   const handleRejectLeave = async (leaveId: string, comments?: string) => {
+    if (!user) return
+
     try {
-      const response = await fetch(`${API_URL}/leaves/${leaveId}/reject`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ comments })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to reject leave")
-      }
-
+      await rejectLeave(leaveId, user.id, comments || '')
       toast.success("Leave application rejected")
       await fetchLeaveData() // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error rejecting leave:", error)
       toast.error(error.message || "Failed to reject leave")
     }
