@@ -9,25 +9,13 @@ interface LeaveBalance {
   year: number
   month: number
   totalMonthlyLeaves: number
-  casualLeaves: {
-    total: number
-    taken: number
-    remaining: number
-  }
-  sickLeaves: {
-    total: number
-    taken: number
-    remaining: number
-  }
-  emergencyLeaves: {
-    total: number
-    taken: number
-    remaining: number
-  }
-  otherLeaves: {
-    total: number
-    taken: number
-    remaining: number
+  totalTaken: number
+  totalRemaining: number
+  leavesByType: {
+    casual: number
+    sick: number
+    emergency: number
+    other: number
   }
   lastUpdated: string
 }
@@ -42,28 +30,28 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
     {
       name: 'Casual Leave',
       code: 'CL',
-      data: balance.casualLeaves,
+      taken: balance.leavesByType.casual,
       color: 'blue',
       icon: Calendar
     },
     {
       name: 'Sick Leave',
       code: 'SL',
-      data: balance.sickLeaves,
+      taken: balance.leavesByType.sick,
       color: 'red',
       icon: TrendingDown
     },
     {
       name: 'Emergency Leave',
       code: 'EL',
-      data: balance.emergencyLeaves,
+      taken: balance.leavesByType.emergency,
       color: 'orange',
       icon: Clock
     },
     {
       name: 'Other Leave',
       code: 'OL',
-      data: balance.otherLeaves,
+      taken: balance.leavesByType.other,
       color: 'purple',
       icon: TrendingUp
     }
@@ -103,12 +91,7 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
     return colors[color] || colors.blue
   }
 
-  const calculateUsagePercentage = (taken: number, total: number) => {
-    return total > 0 ? (taken / total) * 100 : 0
-  }
 
-  const totalTaken = leaveCategories.reduce((sum, category) => sum + category.data.taken, 0)
-  const totalRemaining = leaveCategories.reduce((sum, category) => sum + category.data.remaining, 0)
 
   if (isLoading) {
     return (
@@ -141,7 +124,7 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {totalRemaining}
+            {balance.totalRemaining}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Days Remaining
@@ -170,16 +153,53 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {totalTaken}
+            {balance.totalTaken}
           </div>
         </div>
       </div>
 
-      {/* Leave Categories */}
-      <div className="space-y-4">
+      {/* Total Leave Progress */}
+      <div className="mb-6">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Monthly Leave Usage
+            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {balance.totalTaken} / {balance.totalMonthlyLeaves} days used
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${(balance.totalTaken / balance.totalMonthlyLeaves) * 100}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className={`h-3 rounded-full ${
+                balance.totalRemaining <= 1 ? 'bg-red-600' :
+                balance.totalRemaining <= 2 ? 'bg-yellow-600' : 'bg-green-600'
+              }`}
+            />
+          </div>
+          <div className="mt-2 text-center">
+            <span className={`text-sm font-medium ${
+              balance.totalRemaining <= 1 ? 'text-red-600' :
+              balance.totalRemaining <= 2 ? 'text-yellow-600' : 'text-green-600'
+            }`}>
+              {balance.totalRemaining === 0 ? '⚠️ No leaves remaining this month' :
+               balance.totalRemaining <= 2 ? `⚠️ Only ${balance.totalRemaining} days left` :
+               `✅ ${balance.totalRemaining} days remaining`}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Leave Categories Breakdown */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          Leave Types Used This Month
+        </h3>
         {leaveCategories.map((category) => {
           const colors = getColorClasses(category.color)
-          const usagePercentage = calculateUsagePercentage(category.data.taken, category.data.total)
           const Icon = category.icon
 
           return (
@@ -187,61 +207,30 @@ export default function LeaveBalanceCard({ balance, isLoading = false }: LeaveBa
               key={category.code}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className={`border rounded-lg p-4 ${colors.bg} ${colors.border}`}
+              className={`border rounded-lg p-3 ${colors.bg} ${colors.border}`}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg bg-white/50 dark:bg-gray-800/50`}>
-                    <Icon className={`h-5 w-5 ${colors.icon}`} />
+                    <Icon className={`h-4 w-4 ${colors.icon}`} />
                   </div>
                   <div>
-                    <h3 className={`font-semibold ${colors.text}`}>
+                    <h4 className={`font-medium ${colors.text}`}>
                       {category.name}
-                    </h3>
-                    <p className={`text-sm opacity-75 ${colors.text}`}>
+                    </h4>
+                    <p className={`text-xs opacity-75 ${colors.text}`}>
                       {category.code}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className={`text-lg font-bold ${colors.text}`}>
-                    {category.data.remaining}
+                    {category.taken}
                   </div>
-                  <div className={`text-sm opacity-75 ${colors.text}`}>
-                    of {category.data.total}
+                  <div className={`text-xs opacity-75 ${colors.text}`}>
+                    days used
                   </div>
                 </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="mb-2">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className={`${colors.text} opacity-75`}>
-                    Used: {category.data.taken}
-                  </span>
-                  <span className={`${colors.text} opacity-75`}>
-                    {usagePercentage.toFixed(0)}%
-                  </span>
-                </div>
-                <div className="w-full bg-white/50 dark:bg-gray-800/50 rounded-full h-2">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${usagePercentage}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className={`h-2 rounded-full ${colors.progress}`}
-                  />
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className={`text-xs ${colors.text} opacity-75`}>
-                {category.data.remaining === 0 ? (
-                  <span className="font-medium">⚠️ No leaves remaining</span>
-                ) : category.data.remaining <= 2 ? (
-                  <span className="font-medium">⚠️ Low balance</span>
-                ) : (
-                  <span>✅ Good balance</span>
-                )}
               </div>
             </motion.div>
           )

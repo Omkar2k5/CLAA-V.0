@@ -22,10 +22,10 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const leaveTypes = [
-    { value: 'casual', label: 'Casual Leave', maxDays: 3 },
-    { value: 'sick', label: 'Sick Leave', maxDays: 2 },
-    { value: 'emergency', label: 'Emergency Leave', maxDays: 1 },
-    { value: 'other', label: 'Other Leave', maxDays: 1 }
+    { value: 'casual', label: 'Casual Leave' },
+    { value: 'sick', label: 'Sick Leave' },
+    { value: 'emergency', label: 'Emergency Leave' },
+    { value: 'other', label: 'Other Leave' }
   ]
 
   const validateForm = () => {
@@ -53,13 +53,12 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
         newErrors.endDate = 'End date must be after start date'
       }
 
-      // Calculate days and check against leave type limits
+      // Calculate days and check against monthly limit (5 days max)
       const diffTime = Math.abs(end.getTime() - start.getTime())
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
-      const selectedLeaveType = leaveTypes.find(lt => lt.value === formData.leaveType)
-      
-      if (selectedLeaveType && diffDays > selectedLeaveType.maxDays) {
-        newErrors.endDate = `${selectedLeaveType.label} cannot exceed ${selectedLeaveType.maxDays} days per month`
+
+      if (diffDays > 5) {
+        newErrors.endDate = `Leave application cannot exceed 5 days per month`
       }
     }
 
@@ -115,6 +114,9 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
             Submit your leave application for approval
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+            📋 Maximum 5 days leave per month allowed
           </p>
         </div>
       </div>
@@ -191,7 +193,7 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
           >
             {leaveTypes.map((type) => (
               <option key={type.value} value={type.value}>
-                {type.label} (Max: {type.maxDays} days/month)
+                {type.label}
               </option>
             ))}
           </select>

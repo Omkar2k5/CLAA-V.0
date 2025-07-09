@@ -39,26 +39,14 @@ export interface LeaveBalance {
   teacherId: string;
   year: number;
   month: number; // 0-11 (January = 0, December = 11)
-  totalMonthlyLeaves: number;
-  casualLeaves: {
-    total: number;
-    taken: number;
-    remaining: number;
-  };
-  sickLeaves: {
-    total: number;
-    taken: number;
-    remaining: number;
-  };
-  emergencyLeaves: {
-    total: number;
-    taken: number;
-    remaining: number;
-  };
-  otherLeaves: {
-    total: number;
-    taken: number;
-    remaining: number;
+  totalMonthlyLeaves: number; // Total leaves allowed per month (5)
+  totalTaken: number; // Total leaves taken this month
+  totalRemaining: number; // Total leaves remaining this month
+  leavesByType: {
+    casual: number;
+    sick: number;
+    emergency: number;
+    other: number;
   };
   lastUpdated: string;
 }
@@ -72,7 +60,7 @@ const calculateDays = (startDate: string, endDate: string): number => {
 };
 
 // Create monthly leave balance for a user
-export const createLeaveBalance = async (teacherId: string, totalMonthlyLeaves: number): Promise<void> => {
+export const createLeaveBalance = async (teacherId: string, totalMonthlyLeaves: number = 5): Promise<void> => {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
@@ -83,11 +71,15 @@ export const createLeaveBalance = async (teacherId: string, totalMonthlyLeaves: 
     teacherId,
     year: currentYear,
     month: currentMonth,
-    totalMonthlyLeaves,
-    casualLeaves: { total: 3, taken: 0, remaining: 3 }, // 3 casual leaves per month
-    sickLeaves: { total: 2, taken: 0, remaining: 2 }, // 2 sick leaves per month
-    emergencyLeaves: { total: 1, taken: 0, remaining: 1 }, // 1 emergency leave per month
-    otherLeaves: { total: 1, taken: 0, remaining: 1 }, // 1 other leave per month
+    totalMonthlyLeaves: 5, // Maximum 5 leaves per month
+    totalTaken: 0,
+    totalRemaining: 5,
+    leavesByType: {
+      casual: 0,
+      sick: 0,
+      emergency: 0,
+      other: 0
+    },
     lastUpdated: new Date().toISOString()
   };
 
@@ -111,7 +103,7 @@ export const getLeaveBalance = async (teacherId: string): Promise<LeaveBalance |
 
     if (!balanceDoc.exists()) {
       // If current month balance doesn't exist, create it
-      await createLeaveBalance(teacherId, 7); // 7 total monthly leaves (3+2+1+1)
+      await createLeaveBalance(teacherId, 5); // 5 total monthly leaves
       const newBalanceDoc = await getDoc(doc(db, 'leaveBalances', balanceId));
       return newBalanceDoc.exists() ? { id: newBalanceDoc.id, ...newBalanceDoc.data() } as LeaveBalance : null;
     }
@@ -142,24 +134,9 @@ export const applyForLeave = async (
       throw new Error('Leave balance not found');
     }
 
-    // Check if user has enough leave balance
-    let hasEnoughBalance = false;
-    switch (leaveType) {
-      case 'casual':
-        hasEnoughBalance = balance.casualLeaves.remaining >= daysCount;
-        break;
-      case 'sick':
-        hasEnoughBalance = balance.sickLeaves.remaining >= daysCount;
-        break;
-      case 'emergency':
-        hasEnoughBalance = balance.emergencyLeaves.remaining >= daysCount;
-        break;
-      default:
-        hasEnoughBalance = balance.otherLeaves.remaining >= daysCount;
-    }
-
-    if (!hasEnoughBalance) {
-      throw new Error(`Insufficient ${leaveType} leave balance`);
+    // Check if user has enough total leave balance (max 5 per month)
+    if (balance.totalRemaining < daysCount) {
+      throw new Error(`Insufficient leave balance. You have ${balance.totalRemaining} days remaining this month.`);
     }
 
     // Create leave application
@@ -276,26 +253,38 @@ export const approveLeave = async (
     if (balanceDoc.exists()) {
       const balance = balanceDoc.data() as LeaveBalance;
 
-      switch (leaveData.leaveType) {
-        case 'casual':
-          balance.casualLeaves.taken += leaveData.daysCount;
-          balance.casualLeaves.remaining -= leaveData.daysCount;
-          break;
-        case 'sick':
-          balance.sickLeaves.taken += leaveData.daysCount;
-          balance.sickLeaves.remaining -= leaveData.daysCount;
-          break;
-        case 'emergency':
-          balance.emergencyLeaves.taken += leaveData.daysCount;
-          balance.emergencyLeaves.remaining -= leaveData.daysCount;
-          break;
-        default:
-          balance.otherLeaves.taken += leaveData.daysCount;
-          balance.otherLeaves.remaining -= leaveData.daysCount;
-      }
+      // Calculate new values
+      const newTotalTaken = balance.totalTaken + leaveData.daysCount;
+      const newTotalRemaining = balance.totalRemaining - leaveData.daysCount;
+      const newLeavesByType = { ...balance.leavesByType };
+      newLeavesByType[leaveData.leaveType] += leaveData.daysCount;
 
-      balance.lastUpdated = new Date().toISOString();
-      await updateDoc(doc(db, 'leaveBalances', balanceId), balance);
+      const updateFields = {
+        totalTaken: newTotalTaken,
+        totalRemaining: newTotalRemaining,
+        [`leavesByType.${leaveData.leaveType}`]: newLeavesByType[leaveData.leaveType],
+        lastUpdated: new Date().toISOString()
+      };
+
+      await updateDoc(doc(db, 'leaveBalances', balanceId), updateFields);
+      console.log('Leave balance updated successfully:', updateFields);
+    } else {
+      console.error('Leave balance document not found for:', balanceId);
+      // Create balance if it doesn't exist
+      await createLeaveBalance(leaveData.teacherId, 5);
+      // Retry the update
+      const newBalanceDoc = await getDoc(doc(db, 'leaveBalances', balanceId));
+      if (newBalanceDoc.exists()) {
+        const balance = newBalanceDoc.data() as LeaveBalance;
+        const updateFields = {
+          totalTaken: leaveData.daysCount,
+          totalRemaining: 5 - leaveData.daysCount,
+          [`leavesByType.${leaveData.leaveType}`]: leaveData.daysCount,
+          lastUpdated: new Date().toISOString()
+        };
+        await updateDoc(doc(db, 'leaveBalances', balanceId), updateFields);
+        console.log('Leave balance created and updated:', updateFields);
+      }
     }
   } catch (error: any) {
     console.error('Error approving leave:', error);
