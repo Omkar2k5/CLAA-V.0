@@ -3,152 +3,172 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import TimeSlotGrid from "@/components/time-slot-grid"
-import BookingModal from "@/components/booking-modal"
-import CancelModal from "@/components/cancel-modal"
+import { Plus, Calendar, BarChart3, Users } from "lucide-react"
+import LeaveApplicationForm from "@/components/leave-application-form"
+import LeaveApplicationsList from "@/components/leave-applications-list"
+import LeaveBalanceCard from "@/components/leave-balance-card"
 import LoadingSpinner from "@/components/loading-spinner"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserProfile } from "@/components/user-profile"
 import { useAuth } from "@/contexts/auth-context"
+import { toast } from "sonner"
 
 // API URL - use environment variable or default to localhost
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
-export default function BookingPage() {
-  const [timeSlots, setTimeSlots] = useState([])
-  const [selectedSlot, setSelectedSlot] = useState(null)
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" })
+export default function LeaveManagementPage() {
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [leaveApplications, setLeaveApplications] = useState([])
+  const [leaveBalance, setLeaveBalance] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const { user, token } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { user, token, isAdmin } = useAuth()
   const router = useRouter()
 
-  // Fetch time slots from the API
+  // Redirect to login if not authenticated
   useEffect(() => {
-    fetchTimeSlots()
-  }, [])
+    if (!user && !isLoading) {
+      router.push("/auth/login")
+    }
+  }, [user, isLoading, router])
 
-  const fetchTimeSlots = async () => {
+  // Fetch data when component mounts or user changes
+  useEffect(() => {
+    if (user && token) {
+      fetchLeaveData()
+    }
+  }, [user, token])
+
+  const fetchLeaveData = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_URL}/slots`)
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch slots: ${response.status}`)
+      // Fetch leave applications and balance in parallel
+      const [applicationsResponse, balanceResponse] = await Promise.all([
+        fetch(`${API_URL}/leaves`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API_URL}/balance`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ])
+
+      if (applicationsResponse.ok) {
+        const applicationsData = await applicationsResponse.json()
+        setLeaveApplications(applicationsData.data || [])
       }
 
-      const data = await response.json()
-      setTimeSlots(data.data)
-      setError(null)
-    } catch (err) {
-      console.error("Error fetching time slots:", err)
-      setError("Failed to load time slots. Please try again later.")
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json()
+        setLeaveBalance(balanceData.data)
+      }
+    } catch (error) {
+      console.error("Error fetching leave data:", error)
+      toast.error("Failed to load leave data")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleBookSlot = (slot) => {
-    // Check if user is logged in
-    if (!user) {
-      showNotification("Please sign in to book a slot", "error")
-      router.push("/auth/login")
-      return
-    }
-    
-    setSelectedSlot(slot)
-    setIsBookingModalOpen(true)
-  }
-
-  const handleCancelSlot = (slot) => {
-    // Check if user is logged in
-    if (!user) {
-      showNotification("Please sign in to cancel a booking", "error")
-      router.push("/auth/login")
-      return
-    }
-    
-    // Check if the slot was booked by the current user
-    if (slot.bookedById && slot.bookedById !== user.id) {
-      showNotification("You can only cancel your own bookings", "error")
-      return
-    }
-    
-    setSelectedSlot(slot)
-    setIsCancelModalOpen(true)
-  }
-
-  const confirmBooking = async () => {
+  const handleLeaveApplication = async (leaveData: any) => {
     try {
-      setIsBookingModalOpen(false)
-      showNotification("Booking in progress...", "info")
+      setIsSubmitting(true)
 
-      // Use the authentication token for the request
-      const response = await fetch(`${API_URL}/book`, {
+      const response = await fetch(`${API_URL}/leaves/apply`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          slotId: selectedSlot.id
-        }),
+        body: JSON.stringify(leaveData)
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to book slot")
+        throw new Error(data.message || "Failed to submit leave application")
       }
 
-      // Refresh the time slots to get the updated data
-      await fetchTimeSlots()
-      showNotification(`Successfully booked slot for ${user.name}`, "success")
-    } catch (err) {
-      console.error("Error booking slot:", err)
-      showNotification(err.message || "Failed to book slot", "error")
+      toast.success("Leave application submitted successfully!")
+      setActiveTab('applications')
+      await fetchLeaveData() // Refresh data
+    } catch (error) {
+      console.error("Error submitting leave application:", error)
+      toast.error(error.message || "Failed to submit leave application")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const confirmCancellation = async () => {
+  const handleApproveLeave = async (leaveId: string, comments?: string) => {
     try {
-      setIsCancelModalOpen(false)
-      showNotification("Cancellation in progress...", "info")
-
-      // Use the authentication token for the request
-      const response = await fetch(`${API_URL}/cancel`, {
-        method: "POST",
+      const response = await fetch(`${API_URL}/leaves/${leaveId}/approve`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          slotId: selectedSlot.id,
-        }),
+        body: JSON.stringify({ comments })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to cancel booking")
+        throw new Error(data.message || "Failed to approve leave")
       }
 
-      // Refresh the time slots to get the updated data
-      await fetchTimeSlots()
-      showNotification("Booking has been cancelled", "success")
-    } catch (err) {
-      console.error("Error cancelling booking:", err)
-      showNotification(err.message || "Failed to cancel booking", "error")
+      toast.success("Leave application approved successfully!")
+      await fetchLeaveData() // Refresh data
+    } catch (error) {
+      console.error("Error approving leave:", error)
+      toast.error(error.message || "Failed to approve leave")
     }
   }
 
-  const showNotification = (message, type) => {
-    setNotification({ show: true, message, type })
-    setTimeout(() => {
-      setNotification({ show: false, message: "", type: "" })
-    }, 3000)
+  const handleRejectLeave = async (leaveId: string, comments?: string) => {
+    try {
+      const response = await fetch(`${API_URL}/leaves/${leaveId}/reject`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ comments })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to reject leave")
+      }
+
+      toast.success("Leave application rejected")
+      await fetchLeaveData() // Refresh data
+    } catch (error) {
+      console.error("Error rejecting leave:", error)
+      toast.error(error.message || "Failed to reject leave")
+    }
+  }
+
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'apply', label: 'Apply Leave', icon: Plus },
+    { id: 'applications', label: isAdmin() ? 'All Applications' : 'My Applications', icon: Calendar },
+    ...(isAdmin() ? [{ id: 'users', label: 'Manage Users', icon: Users }] : [])
+  ]
+
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  // Don't render anything if user is not authenticated (will redirect)
+  if (!user) {
+    return null
   }
 
   return (
@@ -162,8 +182,12 @@ export default function BookingPage() {
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Schedulo Lite</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Smart Session Booking System</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                🎓 College Leave Management
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Welcome, {user.name} ({user.role.toUpperCase()}) - {user.department}
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
@@ -180,97 +204,90 @@ export default function BookingPage() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          {/* App description */}
-          <motion.div 
-            className="mb-6 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-6 border border-indigo-100 dark:border-indigo-800"
+          {/* Navigation Tabs */}
+          <motion.div
+            className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <h2 className="text-xl font-semibold text-indigo-800 dark:text-indigo-300 mb-2">Welcome to Schedulo Lite</h2>
-            <p className="text-indigo-700 dark:text-indigo-200 mb-3">
-              A simple and intuitive booking system that helps you manage your time slots efficiently.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div className="flex items-start space-x-3">
-                <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600 dark:text-indigo-300" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-medium text-indigo-700 dark:text-indigo-300">View Available Slots</h3>
-                  <p className="text-sm text-indigo-600 dark:text-indigo-400">Browse through all available time slots</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600 dark:text-indigo-300" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-medium text-indigo-700 dark:text-indigo-300">Book a Session</h3>
-                  <p className="text-sm text-indigo-600 dark:text-indigo-400">Reserve a time slot by entering your name</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600 dark:text-indigo-300" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-medium text-indigo-700 dark:text-indigo-300">Cancel Bookings</h3>
-                  <p className="text-sm text-indigo-600 dark:text-indigo-400">Cancel your reservation if plans change</p>
-                </div>
-              </div>
+            <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-700">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                      activeTab === tab.id
+                        ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                )
+              })}
             </div>
           </motion.div>
 
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Available Time Slots</h2>
-              <motion.button
-                onClick={fetchTimeSlots}
-                className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Refresh
-              </motion.button>
-            </div>
+          {/* Tab Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {activeTab === 'dashboard' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <LeaveApplicationsList
+                      applications={leaveApplications.slice(0, 5)} // Show recent applications
+                      onApprove={handleApproveLeave}
+                      onReject={handleRejectLeave}
+                    />
+                  </div>
+                  <div>
+                    {leaveBalance && <LeaveBalanceCard balance={leaveBalance} />}
+                  </div>
+                </div>
+              )}
 
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <LoadingSpinner />
-              </div>
-            ) : error ? (
-              <motion.div
-                className="bg-red-50 dark:bg-red-900/30 p-4 rounded-md text-red-700 dark:text-red-300 border border-red-100 dark:border-red-800"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <p>{error}</p>
-                <motion.button
-                  onClick={fetchTimeSlots}
-                  className="mt-2 px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Try Again
-                </motion.button>
-              </motion.div>
-            ) : (
-              <TimeSlotGrid timeSlots={timeSlots} onBook={handleBookSlot} onCancel={handleCancelSlot} />
-            )}
-          </div>
+              {activeTab === 'apply' && (
+                <LeaveApplicationForm
+                  onSubmit={handleLeaveApplication}
+                  isLoading={isSubmitting}
+                />
+              )}
+
+              {activeTab === 'applications' && (
+                <LeaveApplicationsList
+                  applications={leaveApplications}
+                  onApprove={handleApproveLeave}
+                  onReject={handleRejectLeave}
+                />
+              )}
+
+              {activeTab === 'users' && isAdmin() && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    User Management
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    User management features coming soon...
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </motion.div>
       </main>
 
       {/* Footer */}
-      <motion.footer 
+      <motion.footer
         className="bg-white dark:bg-gray-800 shadow-inner mt-8 py-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -278,48 +295,10 @@ export default function BookingPage() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
-            Schedulo Lite — A simple and intuitive booking system
+            🎓 College Leave Management System — Streamline your leave approval process
           </p>
         </div>
       </motion.footer>
-
-      {/* Notification */}
-      <AnimatePresence>
-        {notification.show && (
-          <motion.div
-            className={`fixed bottom-4 right-4 px-6 py-3 rounded-md shadow-md ${
-              notification.type === "success"
-                ? "bg-green-500 dark:bg-green-600"
-                : notification.type === "error"
-                  ? "bg-red-500 dark:bg-red-600"
-                  : "bg-indigo-500 dark:bg-indigo-600"
-            } text-white`}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          >
-            {notification.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modals */}
-      <AnimatePresence>
-        {isBookingModalOpen && (
-          <BookingModal onClose={() => setIsBookingModalOpen(false)} onConfirm={confirmBooking} slot={selectedSlot} />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isCancelModalOpen && (
-          <CancelModal
-            onClose={() => setIsCancelModalOpen(false)}
-            onConfirm={confirmCancellation}
-            slot={selectedSlot}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }

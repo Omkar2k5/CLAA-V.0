@@ -10,6 +10,11 @@ type User = {
   id: string
   name: string
   email: string
+  role: 'teacher' | 'hod' | 'principal'
+  department: string
+  employeeId: string
+  joinDate: string
+  totalLeaves: number
   createdAt: string
 }
 
@@ -19,9 +24,10 @@ type AuthContextType = {
   isLoading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string, role: string, department: string, employeeId: string) => Promise<void>
   logout: () => Promise<void>
   clearError: () => void
+  isAdmin: () => boolean
 }
 
 // Create context
@@ -105,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Register function
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, role: string, department: string, employeeId: string) => {
     try {
       setIsLoading(true)
       setError(null)
@@ -115,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email, password, role, department, employeeId })
       })
 
       const data = await response.json()
@@ -164,6 +170,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Clear error
   const clearError = () => setError(null)
 
+  // Check if current user is admin (HOD or Principal)
+  const isAdmin = () => {
+    return user?.role === 'hod' || user?.role === 'principal'
+  }
+
   // Context value
   const value = {
     user,
@@ -173,7 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     register,
     logout,
-    clearError
+    clearError,
+    isAdmin
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,47 +1,79 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Mail, Lock, ArrowRight, AlertCircle } from "lucide-react"
+import { User, Mail, Lock, ArrowRight, AlertCircle, Building, UserCheck, IdCard } from "lucide-react"
+
+// API URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [role, setRole] = useState("teacher")
+  const [department, setDepartment] = useState("")
+  const [employeeId, setEmployeeId] = useState("")
+  const [departments, setDepartments] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState("")
   const router = useRouter()
   const { register, error, clearError } = useAuth()
 
+  // Fetch departments on component mount
+  useEffect(() => {
+    fetchDepartments()
+  }, [])
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch(`${API_URL}/departments`)
+      if (response.ok) {
+        const data = await response.json()
+        setDepartments(data.data || [])
+        if (data.data && data.data.length > 0) {
+          setDepartment(data.data[0].name)
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching departments:", error)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Form validation
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    if (!name.trim() || !email.trim() || !password.trim() || !department.trim() || !employeeId.trim()) {
       setFormError("All fields are required")
       return
     }
-    
+
     if (password !== confirmPassword) {
       setFormError("Passwords do not match")
       return
     }
-    
+
     if (password.length < 6) {
       setFormError("Password must be at least 6 characters")
       return
     }
-    
+
+    if (employeeId.length < 3) {
+      setFormError("Employee ID must be at least 3 characters")
+      return
+    }
+
     try {
       setIsSubmitting(true)
       setFormError("")
       clearError()
-      
-      await register(name, email, password)
+
+      await register(name, email, password, role, department, employeeId)
       router.push("/") // Redirect to home page after successful registration
     } catch (err: any) {
       setFormError(err.message || "Registration failed")
@@ -60,12 +92,15 @@ export default function RegisterPage() {
           className="text-center"
         >
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-            Create a new account
+            🎓 Join College Leave System
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Or{" "}
+            Create your account to manage leave applications
+          </p>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{" "}
             <Link href="/auth/login" className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
-              sign in to your existing account
+              Sign in here
             </Link>
           </p>
         </motion.div>
@@ -134,6 +169,77 @@ export default function RegisterPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
                   placeholder="you@example.com"
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Role
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <UserCheck className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                </div>
+                <select
+                  id="role"
+                  name="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  disabled={isSubmitting}
+                >
+                  <option value="teacher">Teacher</option>
+                  <option value="hod">Head of Department (HOD)</option>
+                  <option value="principal">Principal</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Department
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Building className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                </div>
+                <select
+                  id="department"
+                  name="department"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  disabled={isSubmitting}
+                  required
+                >
+                  {departments.map((dept: any) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Employee ID
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <IdCard className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                </div>
+                <input
+                  id="employeeId"
+                  name="employeeId"
+                  type="text"
+                  required
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  placeholder="EMP001"
                   disabled={isSubmitting}
                 />
               </div>
