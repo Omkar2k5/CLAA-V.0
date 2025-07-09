@@ -13,7 +13,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'teacher' | 'hod' | 'principal';
+  role: 'teacher' | 'admin';
   department: string;
   employeeId: string;
   joinDate: string;
@@ -71,7 +71,7 @@ export const registerUser = async (
   name: string,
   email: string,
   password: string,
-  role: 'teacher' | 'hod' | 'principal',
+  role: 'teacher' | 'admin',
   department: string,
   employeeId: string
 ): Promise<User> => {
@@ -92,7 +92,7 @@ export const registerUser = async (
       department,
       employeeId,
       joinDate: new Date().toISOString(),
-      totalLeaves: role === 'principal' ? 30 : role === 'hod' ? 25 : 20,
+      totalLeaves: role === 'admin' ? 30 : 20,
       createdAt: new Date().toISOString()
     };
 
@@ -153,5 +153,5 @@ export const getUserData = async (uid: string): Promise<User | null> => {
 
 // Check if user is admin (HOD or Principal)
 export const isAdmin = (user: User | null): boolean => {
-  return user?.role === 'hod' || user?.role === 'principal';
+  return user?.role === 'admin';
 };

@@ -124,8 +124,8 @@ export default function LeaveManagementPage() {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'apply', label: 'Apply Leave', icon: Plus },
-    { id: 'applications', label: isAdmin() ? 'All Applications' : 'My Applications', icon: Calendar },
+    ...(user?.role === 'teacher' ? [{ id: 'apply', label: 'Apply Leave', icon: Plus }] : []),
+    { id: 'applications', label: isAdmin() ? 'Leave Applications' : 'My Applications', icon: Calendar },
     ...(isAdmin() ? [{ id: 'users', label: 'Manage Users', icon: Users }] : [])
   ]
 

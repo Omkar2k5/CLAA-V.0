@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name,
         email,
         password,
-        role as 'teacher' | 'hod' | 'principal',
+        role as 'teacher' | 'admin',
         department,
         employeeId
       )

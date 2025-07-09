@@ -192,9 +192,8 @@ export default function RegisterPage() {
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm"
                   disabled={isSubmitting}
                 >
-                  <option value="teacher">Teacher</option>
-                  <option value="hod">Head of Department (HOD)</option>
-                  <option value="principal">Principal</option>
+                  <option value="teacher">Teacher / Professor</option>
+                  <option value="admin">HOD / Principal</option>
                 </select>
               </div>
             </div>

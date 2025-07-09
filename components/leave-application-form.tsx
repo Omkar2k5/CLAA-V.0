@@ -22,10 +22,10 @@ export default function LeaveApplicationForm({ onSubmit, isLoading = false }: Le
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const leaveTypes = [
-    { value: 'casual', label: 'Casual Leave', maxDays: 5 },
+    { value: 'casual', label: 'Casual Leave', maxDays: 12 },
     { value: 'sick', label: 'Sick Leave', maxDays: 10 },
-    { value: 'emergency', label: 'Emergency Leave', maxDays: 3 },
-    { value: 'other', label: 'Other', maxDays: 15 }
+    { value: 'emergency', label: 'Emergency Leave', maxDays: 5 },
+    { value: 'other', label: 'Other Leave', maxDays: 10 }
   ]
 
   const validateForm = () => {

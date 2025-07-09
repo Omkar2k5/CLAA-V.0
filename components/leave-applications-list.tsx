@@ -63,8 +63,7 @@ export default function LeaveApplicationsList({
       casual: 'Casual Leave',
       sick: 'Sick Leave',
       emergency: 'Emergency Leave',
-      maternity: 'Maternity Leave',
-      other: 'Other'
+      other: 'Other Leave'
     }
     return types[type] || type
   }

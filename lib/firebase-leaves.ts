@@ -21,7 +21,7 @@ export interface LeaveApplication {
   teacherDepartment?: string;
   startDate: string;
   endDate: string;
-  leaveType: 'casual' | 'sick' | 'emergency' | 'maternity' | 'other';
+  leaveType: 'casual' | 'sick' | 'emergency' | 'other';
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   appliedDate: string;
@@ -119,7 +119,7 @@ export const applyForLeave = async (
   teacherId: string,
   startDate: string,
   endDate: string,
-  leaveType: 'casual' | 'sick' | 'emergency' | 'maternity' | 'other',
+  leaveType: 'casual' | 'sick' | 'emergency' | 'other',
   reason: string,
   attachments: string[] = []
 ): Promise<LeaveApplication> => {
@@ -181,42 +181,26 @@ export const applyForLeave = async (
 // Get leave applications for a user or all (for admins)
 export const getLeaveApplications = async (user: User): Promise<LeaveApplication[]> => {
   try {
-    let q;
-    
+    let querySnapshot;
+
     if (user.role === 'teacher') {
-      // Teachers can only see their own leaves
-      q = query(
+      // Teachers can only see their own leaves - simple query without orderBy to avoid index issues
+      const q = query(
         collection(db, 'leaveApplications'),
-        where('teacherId', '==', user.id),
-        orderBy('appliedDate', 'desc')
+        where('teacherId', '==', user.id)
       );
-    } else if (user.role === 'hod') {
-      // HODs can see leaves from their department
-      const usersSnapshot = await getDocs(
-        query(collection(db, 'users'), where('department', '==', user.department))
-      );
-      const teacherIds = usersSnapshot.docs.map(doc => doc.id);
-      
-      q = query(
-        collection(db, 'leaveApplications'),
-        where('teacherId', 'in', teacherIds),
-        orderBy('appliedDate', 'desc')
-      );
+      querySnapshot = await getDocs(q);
     } else {
-      // Principals can see all leaves
-      q = query(
-        collection(db, 'leaveApplications'),
-        orderBy('appliedDate', 'desc')
-      );
+      // HODs/Principals can see all leaves - simple query without complex ordering
+      querySnapshot = await getDocs(collection(db, 'leaveApplications'));
     }
 
-    const querySnapshot = await getDocs(q);
     const applications: LeaveApplication[] = [];
-    
+
     // Get user data for each application to add teacher info
     const userPromises = querySnapshot.docs.map(async (docSnapshot) => {
       const appData = { id: docSnapshot.id, ...docSnapshot.data() } as LeaveApplication;
-      
+
       // Get teacher info
       const teacherDoc = await getDoc(doc(db, 'users', appData.teacherId));
       if (teacherDoc.exists()) {
@@ -224,11 +208,24 @@ export const getLeaveApplications = async (user: User): Promise<LeaveApplication
         appData.teacherName = teacherData.name;
         appData.teacherDepartment = teacherData.department;
       }
-      
+
       return appData;
     });
 
     const applicationsWithTeacherInfo = await Promise.all(userPromises);
+
+    // Sort by applied date in memory to avoid index issues
+    applicationsWithTeacherInfo.sort((a, b) =>
+      new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime()
+    );
+
+    // For HODs, filter by department after fetching
+    if (user.role === 'admin') {
+      return applicationsWithTeacherInfo.filter(app =>
+        app.teacherDepartment === user.department
+      );
+    }
+
     return applicationsWithTeacherInfo;
   } catch (error) {
     console.error('Error fetching leave applications:', error);
